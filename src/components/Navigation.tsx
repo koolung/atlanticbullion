@@ -68,11 +68,12 @@ export function Navigation() {
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
             <div className="flex-shrink-0">
-              <Link href="/" className="relative">
+              <Link href="/" className="relative block">
+                {/* Default logo (3.svg) */}
                 <img 
                     src="/images/logo/horizontal/3.svg" 
                     alt="Atlantic Bullion"
-                    className={`h-auto w-[150px] transition-opacity duration-500 ${
+                    className={`w-36 h-auto transition-opacity duration-500 ${
                         isScrolled ? 'opacity-0' : 'opacity-100'
                     }`}
                 />
@@ -80,7 +81,7 @@ export function Navigation() {
                 <img 
                   src="/images/logo/horizontal/2.svg" 
                   alt="Atlantic Bullion"
-                  className={`absolute top-0 left-0 h-auto w-[150px] transition-opacity duration-500 ${
+                  className={`absolute top-0 left-0 w-36 h-auto transition-opacity duration-500 ${
                     isScrolled ? 'opacity-100' : 'opacity-0'
                   }`}
                 />

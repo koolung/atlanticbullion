@@ -1,4 +1,92 @@
+'use client'
+
+import { useState, useRef, useEffect } from 'react'
+import ReCAPTCHA from 'react-google-recaptcha'
+
+const RECAPTCHA_SITE_KEY = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '6LdIl_4rAAAAAN8eDkFcmOHilqZTDxDI1OkrGVb4'
+
 export function Contact() {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    message: '',
+    product: '',
+    preferredDate: '',
+    location: ''
+  })
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle')
+  const [statusMessage, setStatusMessage] = useState('')
+  const recaptchaRef = useRef<ReCAPTCHA>(null)
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    setFormData(prev => ({
+      ...prev,
+      [e.target.name]: e.target.value
+    }))
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!formData.name || !formData.email || !formData.message) {
+      setSubmitStatus('error')
+      setStatusMessage('Please fill in all required fields.')
+      return
+    }
+
+    setIsSubmitting(true)
+    setSubmitStatus('idle')
+
+    try {
+      // Execute reCAPTCHA
+      const recaptchaToken = await recaptchaRef.current?.executeAsync()
+      recaptchaRef.current?.reset()
+
+      if (!recaptchaToken) {
+        throw new Error('reCAPTCHA verification failed')
+      }
+
+      const response = await fetch('/api/send-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...formData,
+          recaptchaToken
+        })
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setSubmitStatus('success')
+        setStatusMessage('Message sent successfully! We\'ll get back to you soon.')
+        setFormData({ name: '', email: '', message: '', product: '', preferredDate: '', location: '' })
+      } else {
+        throw new Error(data.error || 'Failed to send message')
+      }
+    } catch (error) {
+      console.error('Error submitting form:', error)
+      setSubmitStatus('error')
+      setStatusMessage(error instanceof Error ? error.message : 'Failed to send message. Please try again.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  // Clear status message after 5 seconds
+  useEffect(() => {
+    if (submitStatus !== 'idle') {
+      const timer = setTimeout(() => {
+        setSubmitStatus('idle')
+        setStatusMessage('')
+      }, 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [submitStatus])
+
   return (
     <section id="contact" className="py-20 bg-gray-900 text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -46,35 +134,137 @@ export function Contact() {
           
           <div>
             <h3 className="text-2xl font-semibold mb-6">Send us a Message</h3>
-            <form className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    placeholder="Your Name *"
+                    required
+                    className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:border-red-500 text-white placeholder-gray-400"
+                  />
+                </div>
+                <div>
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    placeholder="Your Email *"
+                    required
+                    className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:border-red-500 text-white placeholder-gray-400"
+                  />
+                </div>
+              </div>
+              
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <select
+                    name="product"
+                    value={formData.product}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:border-red-500 text-white"
+                  >
+                    <option value="">Select Product Interest</option>
+                    <option value="Canadian Gold Maple Leafs">Canadian Gold Maple Leafs</option>
+                    <option value="Canadian Silver Maple Leafs">Canadian Silver Maple Leafs</option>
+                    <option value="Gold Bars">Gold Bars (1oz - 10oz)</option>
+                    <option value="Silver Bars">Silver Bars (1oz - 100oz)</option>
+                    <option value="American Gold Eagles">American Gold Eagles</option>
+                    <option value="American Silver Eagles">American Silver Eagles</option>
+                    <option value="Krugerrands">Krugerrands</option>
+                    <option value="Junk Silver">Junk Silver Coins</option>
+                    <option value="Portfolio Consultation">Portfolio Consultation</option>
+                    <option value="Other">Other Products</option>
+                  </select>
+                </div>
+                <div>
+                  <input
+                    type="date"
+                    name="preferredDate"
+                    value={formData.preferredDate}
+                    onChange={handleChange}
+                    placeholder="Preferred Purchase Date"
+                    className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:border-red-500 text-white placeholder-gray-400"
+                  />
+                </div>
+              </div>
+              
               <div>
                 <input
                   type="text"
-                  placeholder="Your Name"
+                  name="location"
+                  value={formData.location}
+                  onChange={handleChange}
+                  placeholder="Your Location (e.g., Halifax, Dartmouth, Truro)"
                   className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:border-red-500 text-white placeholder-gray-400"
                 />
               </div>
-              <div>
-                <input
-                  type="email"
-                  placeholder="Your Email"
-                  className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:border-red-500 text-white placeholder-gray-400"
-                />
-              </div>
+              
               <div>
                 <textarea
+                  name="message"
+                  value={formData.message}
+                  onChange={handleChange}
                   rows={4}
-                  placeholder="Your Message"
+                  placeholder="Your Message *"
+                  required
                   className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:border-red-500 text-white placeholder-gray-400 resize-none"
-                ></textarea>
+                />
               </div>
+              
+              <p className="text-sm text-gray-400">
+                * Required fields. Product, date, and location are optional but help us provide better service.
+              </p>
+              
+              {/* Hidden reCAPTCHA v3 */}
+              <ReCAPTCHA
+                ref={recaptchaRef}
+                sitekey={RECAPTCHA_SITE_KEY}
+                size="invisible"
+                theme="dark"
+              />
+              
+              {/* Status Message */}
+              {submitStatus !== 'idle' && (
+                <div className={`p-3 rounded-lg ${
+                  submitStatus === 'success' 
+                    ? 'bg-green-900 border border-green-700 text-green-200' 
+                    : 'bg-red-900 border border-red-700 text-red-200'
+                }`}>
+                  {statusMessage}
+                </div>
+              )}
+              
               <button
                 type="submit"
-                className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-300"
+                disabled={isSubmitting}
+                className={`w-full font-semibold py-3 px-6 rounded-lg transition-all duration-300 ${
+                  isSubmitting
+                    ? 'bg-gray-600 cursor-not-allowed text-gray-300'
+                    : 'bg-red-600 hover:bg-red-700 text-white hover:shadow-lg'
+                }`}
               >
-                Send Message
+                {isSubmitting ? (
+                  <div className="flex items-center justify-center">
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Sending...
+                  </div>
+                ) : (
+                  'Send Message'
+                )}
               </button>
             </form>
+            
+            <p className="text-xs text-gray-400 mt-4">
+              This site is protected by reCAPTCHA and the Google Privacy Policy and Terms of Service apply.
+            </p>
           </div>
         </div>
       </div>

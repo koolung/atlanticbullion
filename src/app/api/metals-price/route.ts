@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-// const API_KEY = 'zQIw9bBF_fOxB3nFTMbwtt9q7bMGxbml'
-const API_KEY = ''
+const API_KEY = 'zQIw9bBF_fOxB3nFTMbwtt9q7bMGxbml'
 const BASE_URL = 'https://api.polygon.io'
 
 export async function GET(request: NextRequest) {
